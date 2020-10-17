@@ -1,150 +1,127 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
+import ReactDOM, { render } from 'react-dom';
 import './index.css';
 
-function Square(props) { 
-    return (
-        <button className="square" onClick={props.onClick}>
-            {props.value}
-        </button>
-    );
-}
-
-class Board extends React.Component { 
-    constructor(props) { 
+class Canvas extends React.Component {  
+    constructor(props) {
         super(props);
-        this.state = { 
-            squares: Array(9).fill(null),
-            xIsNext: true,
-        }
-    }
-
-    renderSquare(i) { 
-        return (
-        <Square 
-            value={this.props.squares[i]}
-            onClick={() => this.props.onClick(i)} 
-            />
-        );
-    }
-
-    render() {
-        return ( 
-            <div>
-                <div className="board-row">
-                    {this.renderSquare(0)}
-                    {this.renderSquare(1)}
-                    {this.renderSquare(2)}
-                </div>
-                <div className="board-row">
-                    {this.renderSquare(3)}
-                    {this.renderSquare(4)}
-                    {this.renderSquare(5)}
-                </div>
-                <div className="board-row">
-                    {this.renderSquare(6)}
-                    {this.renderSquare(7)}
-                    {this.renderSquare(8)}
-                </div>
-            </div>
-        );
-    }
-}
-
-class Game extends React.Component { 
-    constructor(props) { 
-        super(props); 
         this.state = {
-            history: [{
-                squares: Array(9).fill(null),
-            }],
-            stepNumber: 0,
-            xIsNext: true,
+          value: null,
+        };
+      }
+    
+    componentDidMount() { 
+        const context = this.refs.canvas.getContext('2d');
+        // #var context = canvas.getContext('2d');
+        console.log(this.props.value);
+        if(this.props.value != null){ 
+            context.drawImage(this.props.value, 0, 0, 1280, 720);
         }
-    }
-    handleClick(i) { 
-        const history = this.state.history.slice(0, this.state.stepNumber + 1); 
-        const current = history[history.length - 1]; 
-        const squares = current.squares.slice();
-        if (calculateWinner(squares) || squares[i]) {
-            return;
-          }
-          squares[i] = this.state.xIsNext ? 'X' : 'O';
-          this.setState({
-            history: history.concat([{
-              squares: squares,
-            }]),
-            stepNumber: history.length,
-            xIsNext: !this.state.xIsNext,
-          });
-        }
-    jumpTo(step) { 
-        this.setState({
-            stepNumber: step, 
-            xIsNext: (step % 2) === 0,
-        })
     }
     
     render() { 
-        const history = this.state.history;
-        const current = history[this.state.stepNumber]; 
-        const winner = calculateWinner(current.squares); 
+        return(
+            <canvas ref="canvas" video></canvas>
+        )
+    }
+}
 
-        const moves = history.map((step ,move) => { 
-            const desc = move ? 
-                'Go to move #' + move : 
-                'Go to game state';
-                return (
-                    <li key = {move}>
-                        <button onClick={() => this.jumpTo(move)}>{desc}</button>
-                    </li>
-                )
+class Camera extends React.Component { 
+    gotDevices(mediaDevices) {
+        document.getElementById("select").innerHTML = '';
+        document.getElementById("select").appendChild(document.createElement('option'));
+        let count = 1;
+        mediaDevices.forEach(mediaDevice => {
+            if (mediaDevice.kind === 'videoinput') {
+                const option = document.createElement('option');
+                option.value = mediaDevice.deviceId;
+                const label = mediaDevice.label || `Camera ${count++}`;
+                const textNode = document.createTextNode(label);
+                option.appendChild(textNode);
+                document.getElementById("select").appendChild(option);
+            }
+        });
+    }
+
+    getCamera() { 
+        const videoConstraints = {};
+        var video = document.getElementById('video'), vendorUrl = window.URL || window.webkitURL;
+        const canvas = document.getElementById('canvas');
+        canvas.height = 720; 
+        canvas.width = 1280; 
+        var context = canvas.getContext('2d');
+
+        video.addEventListener('canplay', function () {
+            // Set the canvas the same width and height of the video  
+            video.play();    
+        });
+
+        if (document.getElementById("select") === '') { 
+            videoConstraints.facingMode = 'environment';
+        }
+        else {
+            videoConstraints.deviceId = document.getElementById("select").value ;
+      
+          }
+        const constraints = {
+            video: videoConstraints,
+            audio: false,
+            
+        };
+
+        navigator.mediaDevices.getUserMedia(constraints)
+        .then(mediaStream => { 
+            video.srcObject = mediaStream;
+            const mediaStreamTrack = mediaStream.getVideoTracks()[0];
+            mediaStreamTrack.applyConstraints({
+                width: 1280,
+                height: 720, 
+                whiteBalance: false
+            });
+
         })
 
-
-        let status; 
-        if (winner) { 
-            status = 'Winner: ' + winner; 
-        } else { 
-            status = 'Next player: ' + (this.state.xIsNext ? 'X' : 'O');
-        }
-        return ( 
-            <div className="game">
-                <div className="game-board">
-                    <Board 
-                        squares= {current.squares}
-                        onClick = {(i) => this.handleClick(i)}/>
-                </div>
-                <div className = "game-info">
-                    <div>{status}</div>
-                    <ol>{moves}</ol>
-                </div>
+        video.addEventListener('play', function(){
+            draw(this,context,1280,720);
+        },false);
+    
+        function draw(v,c,w,h) {
+            if(v.paused || v.ended) return false;
+            c.drawImage(v,0,0,w,h);
+            setTimeout(draw,20,v,c,w,h);
+    }       
+    }
+    
+    render() { 
+        return (
+            navigator.mediaDevices.enumerateDevices().then(this.gotDevices),
+            <div className="app">
+            <div className="controls">
+                <button onClick={() => this.getCamera()} id="button">Get camera</button>
+                <select id="select">
+                    <option></option>
+                    </select>
             </div>
+            <video id = "video"></video>
+            <canvas id = "canvas"></canvas>
+            </div>
+        )
+    }
+}
+
+class App extends React.Component { 
+    render() { 
+        return  (
+        <div className="app">
+            <div className="getCamera">
+                <Camera />
+            </div>
+        </div>
         );
     }
 }
 
-function calculateWinner(squares) {
-    const lines = [
-      [0, 1, 2],
-      [3, 4, 5],
-      [6, 7, 8],
-      [0, 3, 6],
-      [1, 4, 7],
-      [2, 5, 8],
-      [0, 4, 8],
-      [2, 4, 6],
-    ];
-    for (let i = 0; i < lines.length; i++) {
-      const [a, b, c] = lines[i];
-      if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
-        return squares[a];
-      }
-    }
-    return null;
-  }
-
 ReactDOM.render(
-    <Game />,
+    <App />,
     document.getElementById('root')
 );
