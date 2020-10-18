@@ -2,30 +2,6 @@ import React from 'react';
 import ReactDOM, { render } from 'react-dom';
 import './index.css';
 
-class Canvas extends React.Component {  
-    constructor(props) {
-        super(props);
-        this.state = {
-          value: null,
-        };
-      }
-    
-    componentDidMount() { 
-        const context = this.refs.canvas.getContext('2d');
-        // #var context = canvas.getContext('2d');
-        console.log(this.props.value);
-        if(this.props.value != null){ 
-            context.drawImage(this.props.value, 0, 0, 1280, 720);
-        }
-    }
-    
-    render() { 
-        return(
-            <canvas ref="canvas" video></canvas>
-        )
-    }
-}
-
 class Camera extends React.Component { 
     gotDevices(mediaDevices) {
         document.getElementById("select").innerHTML = '';
